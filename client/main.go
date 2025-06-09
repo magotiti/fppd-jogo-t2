@@ -1,14 +1,17 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"log"
 	"net/rpc"
 	"os"
+	"strings"
 	"sync"
+	"time"
+
 	shared "t2/common"
 	jogoCore "t2/jogo"
-	"time"
 )
 
 var sequence = 0
@@ -25,7 +28,12 @@ func main() {
 	}
 	id := os.Args[1]
 
-	client, err := rpc.Dial("tcp", "localhost:1234")
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Print("Digite o endereco do servidor: ")
+	endereco, _ := reader.ReadString('\n')
+	endereco = strings.TrimSpace(endereco)
+
+	client, err := rpc.Dial("tcp", endereco)
 	if err != nil {
 		log.Fatal("Erro ao conectar ao servidor RPC:", err)
 	}
@@ -34,7 +42,7 @@ func main() {
 	var ok bool
 	err = client.Call("Servidor.RegistrarJogador", id, &ok)
 	if err != nil || !ok {
-		log.Fatalf("Erro ao registrar jogador. ID já em uso ou posição inicial indisponivel.")
+		log.Fatalf("Erro ao registrar jogador. ID já em uso ou posição inicial indisponível.")
 	}
 
 	// carreca o mapa local (somente no inicio do jogo)
@@ -85,8 +93,6 @@ func main() {
 			}
 			break
 		}
-		// to do: interagir (e)
-		// ........
 	}
 }
 
