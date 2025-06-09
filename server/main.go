@@ -22,7 +22,6 @@ func (server *Servidor) RegistrarJogador(id string, ack *bool) error {
 	server.mu.Lock()
 	defer server.mu.Unlock()
 
-	// ja temos esse id
 	if _, existe := server.players[id]; existe {
 		*ack = false
 		return nil
@@ -32,7 +31,6 @@ func (server *Servidor) RegistrarJogador(id string, ack *bool) error {
 		Players: server.players,
 	}
 
-	// procura uma posicao valida para o jogador
 	var pos [2]int
 	found := false
 	for y, linha := range server.jogo.Mapa {
@@ -52,15 +50,13 @@ func (server *Servidor) RegistrarJogador(id string, ack *bool) error {
 		return nil
 	}
 
-	// registra o jogador
 	server.players[id] = shared.EstadoPlayer{
-		ID : id,
-		X  : pos[0],
-		Y  : pos[1],
+		ID:       id,
+		X:        pos[0],
+		Y:        pos[1],
 		Sequence: 0,
 	}
 	server.sequences[id] = 0
-
 	*ack = true
 	return nil
 }
@@ -71,12 +67,11 @@ func (s *Servidor) DesconectarJogador(id string, ack *bool) error {
 	defer s.mu.Unlock()
 
 	if _, existe := s.players[id]; existe {
-		delete(s.players, id) // libera o id
+		delete(s.players, id)
 		delete(s.sequences, id)
 		*ack = true
 		return nil
 	}
-
 	*ack = false
 	return nil
 }
@@ -101,7 +96,6 @@ func (server *Servidor) AtualizaPosicao(cmd shared.Movimento, ack *bool) error {
 	nx := player.X + cmd.DeltaX
 	ny := player.Y + cmd.DeltaY
 
-	// monta o estado atual para passar a funcao de validacao
 	estadoAtual := shared.EstadoJogo{
 		Players: server.players,
 	}
@@ -139,6 +133,16 @@ func (server *Servidor) GetEstadoJogo(id string, state *shared.EstadoJogo) error
 	return nil
 }
 
+func localIP() string {
+	conn, err := net.Dial("udp", "8.8.8.8:80")
+	if err != nil {
+		return "127.0.0.1"
+	}
+	defer conn.Close()
+	localAddr := conn.LocalAddr().(*net.UDPAddr)
+	return localAddr.IP.String()
+}
+
 func main() {
 	j := jogo.JogoNovo()
 	if err := jogo.JogoCarregarMapa("mapa.txt", &j); err != nil {
@@ -161,7 +165,10 @@ func main() {
 	}
 	defer listener.Close()
 
-	log.Println("Servidor escutando em :1234...")
+	ipLocal := localIP()
+	log.Println("Servidor RPC disponível em:")
+	log.Printf("  Localhost:   localhost:1234")
+	log.Printf("  Rede local:  %s:1234", ipLocal)
 
 	for {
 		conn, err := listener.Accept()
