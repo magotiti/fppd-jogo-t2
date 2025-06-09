@@ -32,6 +32,7 @@ func (server *Servidor) RegistrarJogador(id string, ack *bool) error {
 		Players: server.players,
 	}
 
+	// procura uma posicao valida para o jogador
 	var pos [2]int
 	found := false
 	for y, linha := range server.jogo.Mapa {
@@ -51,6 +52,7 @@ func (server *Servidor) RegistrarJogador(id string, ack *bool) error {
 		return nil
 	}
 
+	// registra o jogador
 	server.players[id] = shared.EstadoPlayer{
 		ID : id,
 		X  : pos[0],
@@ -63,7 +65,23 @@ func (server *Servidor) RegistrarJogador(id string, ack *bool) error {
 	return nil
 }
 
-// processa a demanda de acao do cliente
+// processa o evento de desconexao de um player 
+func (s *Servidor) DesconectarJogador(id string, ack *bool) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	if _, existe := s.players[id]; existe {
+		delete(s.players, id) // libera o id
+		delete(s.sequences, id)
+		*ack = true
+		return nil
+	}
+
+	*ack = false
+	return nil
+}
+
+// processa a demanda de movimento do cliente
 func (server *Servidor) AtualizaPosicao(cmd shared.Movimento, ack *bool) error {
 	server.mu.Lock()
 	defer server.mu.Unlock()

@@ -7,8 +7,8 @@ type EstadoPlayer struct {
 }
 
 type EstadoJogo struct {
-	Players map[string]EstadoPlayer
-	Mapa    [][]rune
+	Players map[string]EstadoPlayer // armazenar posicao e sequencia dos jogadores
+	Mapa    [][]rune                // refresh do mapa
 }
 
 type Movimento struct {

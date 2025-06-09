@@ -34,7 +34,7 @@ func main() {
 	var ok bool
 	err = client.Call("Servidor.RegistrarJogador", id, &ok)
 	if err != nil || !ok {
-		log.Fatalf("Erro ao registrar jogador. ID já em uso ou posição inicial indisponível.")
+		log.Fatalf("Erro ao registrar jogador. ID já em uso ou posição inicial indisponivel.")
 	}
 
 	// carreca o mapa local (somente no inicio do jogo)
@@ -57,9 +57,7 @@ func main() {
 		jogoCore.InterfaceDesenharJogo(&jogoLocal, estado)
 
 		evento := jogoCore.InterfaceLerEventoTeclado()
-		if evento.Tipo == "sair" {
-			break
-		}
+		// anda
 		if evento.Tipo == "mover" {
 			dx, dy := jogoCore.PersonagemMover(evento.Tecla)
 			if dx == 0 && dy == 0 {
@@ -78,6 +76,17 @@ func main() {
 				log.Println("Erro ao enviar movimento:", err)
 			}
 		}
+		// quita
+		if evento.Tipo == "sair" {
+			var ack bool
+			err := client.Call("Servidor.DesconectarJogador", id, &ack)
+			if err != nil {
+				log.Println("Erro ao desconectar jogador:", err)
+			}
+			break
+		}
+		// to do: interagir (e)
+		// ........
 	}
 }
 
