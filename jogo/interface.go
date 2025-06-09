@@ -1,11 +1,13 @@
-// interface.go - Interface gráfica do jogo usando termbox
-// O código abaixo implementa a interface gráfica do jogo usando a biblioteca termbox-go.
-// A biblioteca termbox-go é uma biblioteca de interface de terminal que permite desenhar
+// Interface.go - Interface gráfica do jogo usando termbox
+// O código abaixo implementa a Interface gráfica do jogo usando a biblioteca termbox-go.
+// A biblioteca termbox-go é uma biblioteca de Interface de terminal que permite desenhar
 // elementos na tela, capturar eventos do teclado e gerenciar a aparência do terminal.
 
-package main
+package jogo
 
 import (
+	shared "t2/common"
+
 	"github.com/nsf/termbox-go"
 )
 
@@ -29,20 +31,20 @@ type EventoTeclado struct {
 	Tecla rune   // Tecla pressionada, usada no caso de movimento
 }
 
-// Inicializa a interface gráfica usando termbox
-func interfaceIniciar() {
+// Inicializa a Interface gráfica usando termbox
+func InterfaceIniciar() {
 	if err := termbox.Init(); err != nil {
 		panic(err)
 	}
 }
 
-// Encerra o uso da interface termbox
-func interfaceFinalizar() {
+// Encerra o uso da Interface termbox
+func InterfaceFinalizar() {
 	termbox.Close()
 }
 
 // Lê um evento do teclado e o traduz para um EventoTeclado
-func interfaceLerEventoTeclado() EventoTeclado {
+func InterfaceLerEventoTeclado() EventoTeclado {
 	ev := termbox.PollEvent()
 	if ev.Type != termbox.EventKey {
 		return EventoTeclado{}
@@ -57,43 +59,45 @@ func interfaceLerEventoTeclado() EventoTeclado {
 }
 
 // Renderiza todo o estado atual do jogo na tela
-func interfaceDesenharJogo(jogo *Jogo) {
-	interfaceLimparTela()
+func InterfaceDesenharJogo(jogo *Jogo, estado shared.EstadoJogo) {
+	InterfaceLimparTela()
 
 	// Desenha todos os elementos do mapa
 	for y, linha := range jogo.Mapa {
 		for x, elem := range linha {
-			interfaceDesenharElemento(x, y, elem)
+			InterfaceDesenharElemento(x, y, elem)
 		}
 	}
 
-	// Desenha o personagem sobre o mapa
-	interfaceDesenharElemento(jogo.PosX, jogo.PosY, Personagem)
+	// Desenha todos os jogadores sobre o mapa
+	for _, p := range estado.Players {
+		InterfaceDesenharElemento(p.X, p.Y, Personagem)
+	}
 
 	// Desenha a barra de status
-	interfaceDesenharBarraDeStatus(jogo)
+	InterfaceDesenharBarraDeStatus(jogo)
 
 	// Força a atualização do terminal
-	interfaceAtualizarTela()
+	InterfaceAtualizarTela()
 }
 
 // Limpa a tela do terminal
-func interfaceLimparTela() {
+func InterfaceLimparTela() {
 	termbox.Clear(CorPadrao, CorPadrao)
 }
 
 // Força a atualização da tela do terminal com os dados desenhados
-func interfaceAtualizarTela() {
+func InterfaceAtualizarTela() {
 	termbox.Flush()
 }
 
 // Desenha um elemento na posição (x, y)
-func interfaceDesenharElemento(x, y int, elem Elemento) {
+func InterfaceDesenharElemento(x, y int, elem Elemento) {
 	termbox.SetCell(x, y, elem.simbolo, elem.cor, elem.corFundo)
 }
 
 // Exibe uma barra de status com informações úteis ao jogador
-func interfaceDesenharBarraDeStatus(jogo *Jogo) {
+func InterfaceDesenharBarraDeStatus(jogo *Jogo) {
 	// Linha de status dinâmica
 	for i, c := range jogo.StatusMsg {
 		termbox.SetCell(i, len(jogo.Mapa)+1, c, CorTexto, CorPadrao)
@@ -105,4 +109,3 @@ func interfaceDesenharBarraDeStatus(jogo *Jogo) {
 		termbox.SetCell(i, len(jogo.Mapa)+3, c, CorTexto, CorPadrao)
 	}
 }
-
