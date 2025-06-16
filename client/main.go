@@ -45,66 +45,91 @@ func main() {
         log.Fatalf("Erro ao registrar jogador. ID já em uso ou posição inicial indisponível.")
     }
 
+    // carrega o mapa base local (para desenhar com cor)
+    jogoLocal := jogoCore.JogoNovo()
+    if err := jogoCore.JogoCarregarMapa("mapa.txt", &jogoLocal); err != nil {
+        panic(err)
+    }
+
     jogoCore.InterfaceIniciar()
     defer jogoCore.InterfaceFinalizar()
 
+    // canal para sinalizar atualização do estado
+    atualizaTela := make(chan struct{}, 1)
+
     // go routine para atualizar o estado do jogo constantemente
-    go atualizarEstado(client, id)
+    go atualizarEstado(client, id, atualizaTela)
+
+    // go routine para ler eventos do teclado
+    eventos := make(chan jogoCore.EventoTeclado, 1)
+    go func() {
+        for {
+            eventos <- jogoCore.InterfaceLerEventoTeclado()
+        }
+    }()
+
+    // desenha a tela inicialmente
+    mu.Lock()
+    estado := estadoAtual
+    mu.Unlock()
+    jogoCore.InterfaceDesenharJogo(&jogoLocal, estado)
 
     for {
-        mu.Lock()
-        estado := estadoAtual
-        mu.Unlock()
-
-        // Agora desenha apenas o estado recebido do servidor
-        jogoCore.InterfaceDesenharJogo(nil, estado)
-
-        evento := jogoCore.InterfaceLerEventoTeclado()
-        // anda
-        if evento.Tipo == "mover" {
-            dx, dy := jogoCore.PersonagemMover(evento.Tecla)
-            if dx == 0 && dy == 0 {
-                continue
+        select {
+        case <-atualizaTela:
+            mu.Lock()
+            estado := estadoAtual
+            mu.Unlock()
+            jogoCore.InterfaceDesenharJogo(&jogoLocal, estado)
+        case evento := <-eventos:
+            if evento.Tipo == "mover" {
+                dx, dy := jogoCore.PersonagemMover(evento.Tecla)
+                if dx == 0 && dy == 0 {
+                    continue
+                }
+                mov := shared.Movimento{
+                    ID:       id,
+                    DeltaX:   dx,
+                    DeltaY:   dy,
+                    Sequence: sequence + 1,
+                }
+                var ack bool
+                err := client.Call("Servidor.AtualizaPosicao", mov, &ack)
+                if err != nil {
+                    log.Println("Erro ao enviar movimento:", err)
+                }
+                if ack {
+                    sequence++
+                }
             }
-            mov := shared.Movimento{
-                ID:       id,
-                DeltaX:   dx,
-                DeltaY:   dy,
-                Sequence: sequence + 1,
+            if evento.Tipo == "sair" {
+                var ack bool
+                err := client.Call("Servidor.DesconectarJogador", id, &ack)
+                if err != nil {
+                    log.Println("Erro ao desconectar jogador:", err)
+                }
+                return
             }
-            var ack bool
-            err := client.Call("Servidor.AtualizaPosicao", mov, &ack)
-            if err != nil {
-                log.Println("Erro ao enviar movimento:", err)
-            }
-            if ack {
-                sequence++
-            }
-        }
-        // quita
-        if evento.Tipo == "sair" {
-            var ack bool
-            err := client.Call("Servidor.DesconectarJogador", id, &ack)
-            if err != nil {
-                log.Println("Erro ao desconectar jogador:", err)
-            }
-            break
         }
     }
 }
 
-func atualizarEstado(client *rpc.Client, id string) {
+func atualizarEstado(client *rpc.Client, id string, atualizaTela chan<- struct{}) {
     for {
         var estado shared.EstadoJogo
         err := client.Call("Servidor.GetEstadoJogo", id, &estado)
         if err != nil {
-            log.Println("Erro ao obter estado:", err)
             time.Sleep(time.Second)
             continue
         }
         mu.Lock()
         estadoAtual = estado
         mu.Unlock()
+        // sinaliza para redesenhar a tela
+        select {
+        case atualizaTela <- struct{}{}:
+        default:
+        }
         time.Sleep(100 * time.Millisecond)
     }
 }

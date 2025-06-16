@@ -57,10 +57,19 @@ func InterfaceLerEventoTeclado() EventoTeclado {
 func InterfaceDesenharJogo(jogo *Jogo, estado shared.EstadoJogo) {
     InterfaceLimparTela()
 
-    // Desenha todos os elementos do mapa recebido do servidor
-    for y, linha := range estado.Mapa {
-        for x, elem := range linha {
-            InterfaceDesenharElemento(x, y, Elemento{simbolo: elem, cor: CorPadrao, corFundo: CorPadrao})
+    // desenha todos os elementos do mapa base (com cor)
+    if jogo != nil {
+        for y, linha := range jogo.Mapa {
+            for x, elem := range linha {
+                InterfaceDesenharElemento(x, y, elem)
+            }
+        }
+    } else {
+        // fallback: desenha só símbolos se não houver mapa base
+        for y, linha := range estado.Mapa {
+            for x, elem := range linha {
+                InterfaceDesenharElemento(x, y, Elemento{simbolo: elem, cor: CorPadrao, corFundo: CorPadrao})
+            }
         }
     }
 
@@ -69,40 +78,41 @@ func InterfaceDesenharJogo(jogo *Jogo, estado shared.EstadoJogo) {
         InterfaceDesenharElemento(p.X, p.Y, Personagem)
     }
 
-    // Desenha a barra de status (opcional, pode remover se não usar jogo.StatusMsg)
+    // desenha a barra de status APÓS o mapa
     InterfaceDesenharBarraDeStatus(jogo)
-
-    // Força a atualização do terminal
     InterfaceAtualizarTela()
 }
 
-// Limpa a tela do terminal
 func InterfaceLimparTela() {
     termbox.Clear(CorPadrao, CorPadrao)
 }
 
-// Força a atualização da tela do terminal com os dados desenhados
 func InterfaceAtualizarTela() {
     termbox.Flush()
 }
 
-// Desenha um elemento na posição (x, y)
 func InterfaceDesenharElemento(x, y int, elem Elemento) {
     termbox.SetCell(x, y, elem.simbolo, elem.cor, elem.corFundo)
 }
 
-// Exibe uma barra de status com informações úteis ao jogador
 func InterfaceDesenharBarraDeStatus(jogo *Jogo) {
+    linhaStatus := 0
+    if jogo != nil && len(jogo.Mapa) > 0 {
+        linhaStatus = len(jogo.Mapa) + 1
+    } else {
+        linhaStatus = 1
+    }
+
     // Linha de status dinâmica
     if jogo != nil {
         for i, c := range jogo.StatusMsg {
-            termbox.SetCell(i, 1, c, CorTexto, CorPadrao)
+            termbox.SetCell(i, linhaStatus, c, CorTexto, CorPadrao)
         }
     }
 
     // Instruções fixas
     msg := "Use WASD para mover e E para interagir. ESC para sair."
     for i, c := range msg {
-        termbox.SetCell(i, 3, c, CorTexto, CorPadrao)
+        termbox.SetCell(i, linhaStatus+2, c, CorTexto, CorPadrao)
     }
 }
